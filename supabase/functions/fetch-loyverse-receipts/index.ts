@@ -12,7 +12,7 @@ serve(async () => {
 
   const data = await response.json();
 
-  return new Response(JSON.stringify(data), {
+  return new Response(JSON.stringify({ receipts: data }), {
     headers: { "Content-Type": "application/json" }
   });
 });
