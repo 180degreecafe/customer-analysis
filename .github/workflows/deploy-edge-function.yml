@@ -22,7 +22,8 @@ jobs:
 
       - name: Install Supabase CLI
         run: |
-          curl -sL https://github.com/supabase/cli/releases/latest/download/supabase-cli-linux-x64.tar.gz | tar -xz
+          wget https://github.com/supabase/cli/releases/latest/download/supabase-cli-linux-amd64 -O supabase
+          chmod +x supabase
           sudo mv supabase /usr/local/bin/supabase
 
       - name: Deploy Edge Function
