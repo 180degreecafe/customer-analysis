@@ -16,16 +16,3 @@ serve(async () => {
     headers: { "Content-Type": "application/json" }
   });
 });
-
-init edge function
-// Trigger redeploy
-// Trigger redeploy
-// Trigger redeploy
-// Trigger redeploy
-// Trigger redeploy
-// Trigger redeploy
-// Trigger redeploy
-// Trigger redeploy
-// Trigger redeploy
-// Trigger redeploy
-// Trigger redeploy
