@@ -21,7 +21,9 @@ jobs:
           node-version: 18
 
       - name: Install Supabase CLI
-        run: npm install -g supabase
+        run: |
+          curl -sL https://github.com/supabase/cli/releases/latest/download/supabase-cli-linux-x64.tar.gz | tar -xz
+          sudo mv supabase /usr/local/bin/supabase
 
       - name: Deploy Edge Function
         env:
