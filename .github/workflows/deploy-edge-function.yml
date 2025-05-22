@@ -29,6 +29,11 @@ jobs:
         run: |
           supabase link --project-ref qwaooajgkkqtpbidzumd
 
+      - name: Create supabase.toml to disable JWT check
+        run: |
+          echo "[functions.fetch-loyverse-receipts]" > supabase/functions/fetch-loyverse-receipts/supabase.toml
+          echo "verify_jwt = false" >> supabase/functions/fetch-loyverse-receipts/supabase.toml
+
       - name: Deploy function to Supabase
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
