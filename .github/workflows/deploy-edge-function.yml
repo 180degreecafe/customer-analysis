@@ -22,9 +22,9 @@ jobs:
 
       - name: Install Supabase CLI
         run: |
-          wget https://github.com/supabase/cli/releases/latest/download/supabase-cli-linux-amd64 -O supabase
-          chmod +x supabase
-          sudo mv supabase /usr/local/bin/supabase
+          wget https://github.com/supabase/cli/releases/latest/download/supabase-cli-linux-amd64 -O supabase-cli
+          chmod +x supabase-cli
+          sudo mv supabase-cli /usr/local/bin/supabase
 
       - name: Deploy Edge Function
         env:
