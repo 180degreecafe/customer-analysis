@@ -18,3 +18,4 @@ serve(async () => {
 });
 
 init edge function
+// Trigger redeploy
