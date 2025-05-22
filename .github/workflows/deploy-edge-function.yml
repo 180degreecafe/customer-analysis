@@ -18,7 +18,7 @@ jobs:
       - name: Install Supabase CLI
         run: |
           wget https://github.com/supabase/cli/releases/download/v2.23.4/supabase_linux_amd64.tar.gz -O supabase.tar.gz
-          rm -f supabase   # حذف الملف إذا كان موجود
+          rm -rf supabase   # حذف المجلد أو الملف إذا موجود
           tar -xzf supabase.tar.gz
           chmod +x supabase
           sudo mv supabase /usr/local/bin/supabase
