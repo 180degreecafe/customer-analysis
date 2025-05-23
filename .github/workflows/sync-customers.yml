@@ -6,7 +6,6 @@ on:
       - main
     paths:
       - "supabase/functions/sync-customers/**"
-  workflow_dispatch:  # <-- هذا السطر يسمح بتشغيل الـ workflow يدويًا
 
 jobs:
   deploy:
@@ -32,3 +31,11 @@ jobs:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
         run: |
           supabase functions deploy sync-customers --project-ref qwaooajgkkqtpbidzumd
+
+      - name: Invoke sync-customers function
+        env:
+          ACCESS_TOKEN: ${{ secrets.ACCESS_TOKEN }}
+        run: |
+          echo "Invoking function..."
+          curl -X POST https://qwaooajgkkqtpbidzumd.supabase.co/functions/v1/sync-customers \
+            -H "x-loyverse-token: $ACCESS_TOKEN"
