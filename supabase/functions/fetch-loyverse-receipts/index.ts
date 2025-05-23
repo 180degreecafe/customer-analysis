@@ -13,25 +13,21 @@ serve(async (req) => {
 
   const limit = 50;
 
-  // 1. استخراج أقدم receipt_number موجود
-  const { data: oldestOrder, error } = await supabase
+  const { data: latestOrder } = await supabase
     .from("orders")
     .select("id")
-    .order("receipt_date", { ascending: true })
+    .order("order_time", { ascending: false })
     .limit(1)
     .single();
 
-  let beforeReceipt: string | null = oldestOrder?.id ?? null;
-
+  let afterReceipt: string | null = latestOrder?.id ?? null;
   let processed = 0;
 
   try {
     while (true) {
       const url = new URL("https://api.loyverse.com/v1.0/receipts");
       url.searchParams.set("limit", `${limit}`);
-      if (beforeReceipt) {
-        url.searchParams.set("before_receipt_number", beforeReceipt);
-      }
+      if (afterReceipt) url.searchParams.set("after_receipt_number", afterReceipt);
 
       const res = await fetch(url.toString(), {
         headers: {
@@ -40,18 +36,15 @@ serve(async (req) => {
         },
       });
 
-      if (!res.ok) {
-        return new Response(`Failed to fetch receipts: ${res.status}`, { status: 500 });
-      }
+      if (!res.ok) return new Response(`Failed to fetch receipts: ${res.status}`, { status: 500 });
 
       const { receipts } = await res.json();
       if (!receipts || receipts.length === 0) break;
 
       for (const receipt of receipts) {
-        beforeReceipt = receipt.receipt_number;
+        afterReceipt = receipt.receipt_number;
 
         let customer_id = null;
-
         if (receipt.customer_id) {
           const customerRes = await fetch(`https://api.loyverse.com/v1.0/customers/${receipt.customer_id}`, {
             headers: {
@@ -116,7 +109,7 @@ serve(async (req) => {
       }
     }
 
-    return new Response(`✅ Auto-fetched and stored ${processed} receipts`, {
+    return new Response(`✅ Synced ${processed} new receipts`, {
       headers: { "Content-Type": "text/plain" },
     });
 
