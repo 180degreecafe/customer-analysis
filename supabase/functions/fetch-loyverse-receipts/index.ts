@@ -74,6 +74,10 @@ serve(async (req: Request) => {
         .select()
         .single();
 
+      if (!order) {
+        throw new Error(`Order not inserted for receipt ${receipt.receipt_number}`);
+      }
+
       for (const item of receipt.line_items) {
         await supabase.from("Order_items").upsert({
           id: item.id,
@@ -99,5 +103,3 @@ serve(async (req: Request) => {
     });
   }
 });
-
-//com
