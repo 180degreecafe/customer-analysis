@@ -1,4 +1,4 @@
-name: Deploy Sync Customers Function
+name: Deploy and Run Sync Customers Function
 
 on:
   push:
@@ -37,5 +37,5 @@ jobs:
         env:
           ACCESS_TOKEN: ${{ secrets.ACCESS_TOKEN }}
         run: |
-          curl -X POST https://qwaooajgkkqtpbidzumd.supabase.co/functions/v1/sync-customers \
-            -H "x-loyverse-token: $ACCESS_TOKEN"
+          curl -X POST "https://qwaooajgkkqtpbidzumd.supabase.co/functions/v1/sync-customers" \
+            -H "x-loyverse-token: ${ACCESS_TOKEN}"
