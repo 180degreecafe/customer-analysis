@@ -11,16 +11,14 @@ serve(async (req) => {
     return new Response("Missing x-loyverse-token header", { status: 401 });
   }
 
-  let synced = 0;
-  let cursor: string | null = null;
+  let inserted = 0;
+  let cursor = null;
 
   try {
     while (true) {
       const url = new URL("https://api.loyverse.com/v1.0/customers");
       url.searchParams.set("limit", "250");
-      if (cursor) {
-        url.searchParams.set("cursor", cursor);
-      }
+      if (cursor) url.searchParams.set("cursor", cursor);
 
       const res = await fetch(url.toString(), {
         headers: {
@@ -30,34 +28,30 @@ serve(async (req) => {
       });
 
       if (!res.ok) {
-        return new Response(`Failed to fetch customers: ${res.status}`, {
-          status: 500,
-        });
+        return new Response(`Failed to fetch customers: ${res.status}`, { status: 500 });
       }
 
-      const data = await res.json();
-      const customers = data.customers ?? [];
-      cursor = data.cursor ?? null;
+      const { customers, cursor: nextCursor } = await res.json();
 
       for (const c of customers) {
-        await supabase.from("customers").upsert(
-          {
-            id: c.id,
-            name: c.name,
-            phone: c.phone_number,
-            email: c.email,
-          },
-          { onConflict: "id" }
-        );
-        synced++;
+        await supabase.from("customers").upsert({
+          id: c.id,
+          name: c.name,
+          phone: c.phone_number,
+          email: c.email,
+        }, { onConflict: "id" });
+
+        inserted++;
       }
 
-      if (!cursor) break;
+      if (!nextCursor) break;
+      cursor = nextCursor;
     }
 
-    return new Response(`✅ Synced ${synced} customers`, {
+    return new Response(`✅ Synced ${inserted} customers`, {
       headers: { "Content-Type": "text/plain" },
     });
+
   } catch (err) {
     return new Response(`Error: ${err.message}`, {
       status: 500,
