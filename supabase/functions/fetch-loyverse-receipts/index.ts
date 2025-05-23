@@ -1,12 +1,16 @@
 import { serve } from "https://deno.land/std@0.192.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-const ACCESS_TOKEN = Deno.env.get("ACCESS_TOKEN")!;
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
-serve(async () => {
+serve(async (req) => {
+  const accessToken = req.headers.get("x-loyverse-token");
+  if (!accessToken) {
+    return new Response("Missing x-loyverse-token header", { status: 401 });
+  }
+
   let cursor: string | null = null;
   let processed = 0;
   const limit = 50;
@@ -19,7 +23,7 @@ serve(async () => {
 
       const res = await fetch(url.toString(), {
         headers: {
-          Authorization: `Bearer ${ACCESS_TOKEN}`,
+          Authorization: `Bearer ${accessToken}`,
           Accept: "application/json",
         },
       });
@@ -37,7 +41,7 @@ serve(async () => {
         if (receipt.customer_id) {
           const customerRes = await fetch(`https://api.loyverse.com/v1.0/customers/${receipt.customer_id}`, {
             headers: {
-              Authorization: `Bearer ${ACCESS_TOKEN}`,
+              Authorization: `Bearer ${accessToken}`,
               Accept: "application/json",
             },
           });
@@ -81,10 +85,7 @@ serve(async () => {
           .select()
           .single();
 
-        if (!order) {
-          console.log("Skipping receipt due to missing order:", receipt.receipt_number);
-          continue;
-        }
+        if (!order) continue;
 
         for (const item of receipt.line_items) {
           await supabase.from("order_items").upsert({
