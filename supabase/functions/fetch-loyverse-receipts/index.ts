@@ -12,7 +12,17 @@ serve(async (req) => {
   }
 
   const limit = 50;
-  let beforeReceipt: string | null = "11-11538"; // نقطة البداية
+
+  // 1. استخراج أقدم receipt_number موجود
+  const { data: oldestOrder, error } = await supabase
+    .from("orders")
+    .select("id")
+    .order("receipt_date", { ascending: true })
+    .limit(1)
+    .single();
+
+  let beforeReceipt: string | null = oldestOrder?.id ?? null;
+
   let processed = 0;
 
   try {
@@ -106,7 +116,7 @@ serve(async (req) => {
       }
     }
 
-    return new Response(`✅ Fetched and stored ${processed} receipts`, {
+    return new Response(`✅ Auto-fetched and stored ${processed} receipts`, {
       headers: { "Content-Type": "text/plain" },
     });
 
