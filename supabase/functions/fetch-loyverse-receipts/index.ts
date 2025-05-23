@@ -11,6 +11,14 @@ serve(async (req) => {
     return new Response("Missing x-loyverse-token header", { status: 401 });
   }
 
+  const latestOrder = await supabase
+    .from("orders")
+    .select("created_at")
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  let latestTimestamp = latestOrder?.data?.created_at;
   let cursor: string | null = null;
   let processed = 0;
   const limit = 50;
@@ -36,6 +44,13 @@ serve(async (req) => {
       if (!receipts || receipts.length === 0) break;
 
       for (const receipt of receipts) {
+        // توقف عند أول طلب أقدم من آخر طلب محفوظ
+        if (latestTimestamp && new Date(receipt.created_at) <= new Date(latestTimestamp)) {
+          return new Response(`Done. Skipped older receipts. Total new: ${processed}`, {
+            headers: { "Content-Type": "text/plain" },
+          });
+        }
+
         let customer_id = null;
 
         if (receipt.customer_id) {
@@ -53,7 +68,7 @@ serve(async (req) => {
               .from("customers")
               .select("id")
               .eq("phone", c.phone_number)
-              .single();
+              .maybeSingle();
 
             if (existing) {
               customer_id = existing.id;
@@ -105,7 +120,7 @@ serve(async (req) => {
       cursor = nextCursor;
     }
 
-    return new Response(`Successfully processed ${processed} receipts.`, {
+    return new Response(`Successfully processed ${processed} new receipts.`, {
       headers: { "Content-Type": "text/plain" },
     });
 
