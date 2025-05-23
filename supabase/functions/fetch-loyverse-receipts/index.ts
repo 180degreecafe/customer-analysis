@@ -99,4 +99,5 @@ serve(async () => {
   }
 });
 
+console.log("Token prefix:", ACCESS_TOKEN?.slice(0, 5)); // اختياري للطباعة
 //com
