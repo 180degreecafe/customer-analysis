@@ -1,20 +1,19 @@
 import { serve } from "https://deno.land/std@0.192.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
+const ACCESS_TOKEN = Deno.env.get("ACCESS_TOKEN")!;
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
-serve(async (req: Request) => {
-  try {
-    const ACCESS_TOKEN = req.headers.get("x-loyverse-token");
-    if (!ACCESS_TOKEN) {
-      return new Response("Missing x-loyverse-token header", { status: 401 });
-    }
+serve(async (req) => {
+  const tokenHeader = req.headers.get("x-loyverse-token");
+  const token = tokenHeader || ACCESS_TOKEN;
 
+  try {
     const res = await fetch("https://api.loyverse.com/v1.0/receipts?limit=50", {
       headers: {
-        Authorization: `Bearer ${ACCESS_TOKEN}`,
+        Authorization: `Bearer ${token}`,
         Accept: "application/json",
       },
     });
@@ -27,12 +26,13 @@ serve(async (req: Request) => {
     let processed = 0;
 
     for (const receipt of receipts) {
-      let customer_id = null;
+      let customer_id: string | null = null;
 
+      // جلب بيانات العميل
       if (receipt.customer_id) {
         const customerRes = await fetch(`https://api.loyverse.com/v1.0/customers/${receipt.customer_id}`, {
           headers: {
-            Authorization: `Bearer ${ACCESS_TOKEN}`,
+            Authorization: `Bearer ${token}`,
             Accept: "application/json",
           },
         });
@@ -41,7 +41,7 @@ serve(async (req: Request) => {
           const c = await customerRes.json();
 
           const { data: existing } = await supabase
-            .from("Customers")
+            .from("customers")
             .select("id")
             .eq("phone", c.phone_number)
             .single();
@@ -50,7 +50,7 @@ serve(async (req: Request) => {
             customer_id = existing.id;
           } else {
             const { data: newCustomer } = await supabase
-              .from("Customers")
+              .from("customers")
               .insert({
                 name: c.name,
                 phone: c.phone_number,
@@ -59,27 +59,32 @@ serve(async (req: Request) => {
               .select()
               .single();
 
-            customer_id = newCustomer?.id;
+            customer_id = newCustomer?.id || null;
           }
+        } else {
+          console.log(`Customer ${receipt.customer_id} not found in Loyverse`);
         }
       }
 
-      const { data: order } = await supabase
-        .from("Orders")
+      // إدخال الطلب
+      const { data: order, error: orderError } = await supabase
+        .from("orders")
         .upsert({
           id: receipt.receipt_number,
-          customer_id: customer_id,
+          customer_id: customer_id, // يمكن أن تكون null
           created_at: receipt.created_at,
         })
         .select()
         .single();
 
-      if (!order) {
-        throw new Error(`Order not inserted for receipt ${receipt.receipt_number}`);
+      if (orderError || !order) {
+        console.error(`Order not inserted for receipt ${receipt.receipt_number}`);
+        continue;
       }
 
+      // العناصر
       for (const item of receipt.line_items) {
-        await supabase.from("Order_items").upsert({
+        await supabase.from("order_items").upsert({
           id: item.id,
           order_id: order.id,
           product_name: item.item_name,
@@ -103,5 +108,3 @@ serve(async (req: Request) => {
     });
   }
 });
-//com
-//com
