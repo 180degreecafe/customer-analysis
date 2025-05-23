@@ -6,103 +6,88 @@ const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
-serve(async (req) => {
-  const tokenHeader = req.headers.get("x-loyverse-token");
-  const token = tokenHeader || ACCESS_TOKEN;
+serve(async () => {
+  let cursor: string | null = null;
+  let processed = 0;
+  const limit = 50;
 
   try {
-    const res = await fetch("https://api.loyverse.com/v1.0/receipts?limit=50", {
-      headers: {
-        Authorization: `Bearer ${token}`,
-        Accept: "application/json",
-      },
-    });
+    while (true) {
+      const url = new URL("https://api.loyverse.com/v1.0/receipts");
+      url.searchParams.set("limit", `${limit}`);
+      if (cursor) url.searchParams.set("cursor", cursor);
 
-    if (!res.ok) {
-      console.error("Failed to fetch receipts:", res.status);
-      return new Response(`Failed to fetch receipts: ${res.status}`, { status: 500 });
-    }
+      const res = await fetch(url.toString(), {
+        headers: {
+          Authorization: `Bearer ${ACCESS_TOKEN}`,
+          Accept: "application/json",
+        },
+      });
 
-    const { receipts } = await res.json();
-    let processed = 0;
+      if (!res.ok) {
+        return new Response(`Failed to fetch receipts: ${res.status}`, { status: 500 });
+      }
 
-    for (const receipt of receipts) {
-      console.log(`\n--- Receipt: ${receipt.receipt_number} ---`);
-      let customer_id: string | null = null;
+      const { receipts, cursor: nextCursor } = await res.json();
+      if (!receipts || receipts.length === 0) break;
 
-      // جلب بيانات العميل
-      if (receipt.customer_id) {
-        const customerRes = await fetch(`https://api.loyverse.com/v1.0/customers/${receipt.customer_id}`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            Accept: "application/json",
-          },
-        });
+      for (const receipt of receipts) {
+        let customer_id = null;
 
-        if (customerRes.ok) {
-          const c = await customerRes.json();
+        if (receipt.customer_id) {
+          const customerRes = await fetch(`https://api.loyverse.com/v1.0/customers/${receipt.customer_id}`, {
+            headers: {
+              Authorization: `Bearer ${ACCESS_TOKEN}`,
+              Accept: "application/json",
+            },
+          });
 
-          const { data: existing } = await supabase
-            .from("customers")
-            .select("id")
-            .eq("phone", c.phone_number)
-            .single();
+          if (customerRes.ok) {
+            const c = await customerRes.json();
 
-          if (existing) {
-            customer_id = existing.id;
-          } else {
-            const { data: newCustomer, error } = await supabase
+            const { data: existing } = await supabase
               .from("customers")
-              .insert({
-                name: c.name,
-                phone: c.phone_number,
-                email: c.email,
-                id: c.id,
-              })
-              .select()
+              .select("id")
+              .eq("phone", c.phone_number)
               .single();
 
-            customer_id = newCustomer?.id || null;
-            if (error) {
-              console.error("Failed to insert customer:", error.message);
+            if (existing) {
+              customer_id = existing.id;
+            } else {
+              const { data: newCustomer } = await supabase
+                .from("customers")
+                .insert({
+                  name: c.name,
+                  phone: c.phone_number,
+                  email: c.email,
+                })
+                .select()
+                .single();
+
+              customer_id = newCustomer?.id;
             }
           }
-        } else {
-          console.warn(`Failed to fetch customer: ${receipt.customer_id}`);
         }
-      }
 
-      // إدخال الطلب
-      const { data: order, error: orderError } = await supabase
-        .from("orders")
-        .upsert({
-          id: receipt.receipt_number,
-          customer_id: customer_id || null,
-          created_at: receipt.created_at,
-          total_amount: receipt.total_money,
-          order_time: receipt.receipt_date,
-        })
-        .select()
-        .single();
+        const { data: order } = await supabase
+          .from("orders")
+          .upsert({
+            id: receipt.receipt_number,
+            customer_id: customer_id,
+            created_at: receipt.created_at,
+            order_time: receipt.receipt_date,
+            total_amount: receipt.total_money,
+          })
+          .select()
+          .single();
 
-      if (orderError || !order) {
-        console.error(`❌ Order insert failed for receipt ${receipt.receipt_number}: ${orderError?.message}`);
-        continue;
-      }
+        if (!order) {
+          console.log("Skipping receipt due to missing order:", receipt.receipt_number);
+          continue;
+        }
 
-      console.log(`✅ Order inserted: ${order.id}`);
-
-      // التحقق من إدخال العناصر
-      if (!order?.id) {
-        console.error("❌ order.id is undefined. Skipping item insertion.");
-        continue;
-      }
-
-      if (receipt.line_items?.length) {
-        console.log(`Inserting ${receipt.line_items.length} items for order ${order.id}`);
         for (const item of receipt.line_items) {
-          console.log("Item details:", item);
-          const { error: itemError } = await supabase.from("order_items").upsert({
+          await supabase.from("order_items").upsert({
             id: item.id,
             order_id: order.id,
             product_name: item.item_name,
@@ -110,18 +95,13 @@ serve(async (req) => {
             price: item.price,
             total: item.total_money,
           }, { onConflict: "id" });
-
-          if (itemError) {
-            console.error(`❌ Failed to insert item ${item.id}: ${itemError.message}`);
-          } else {
-            console.log(`✅ Item inserted: ${item.item_name} (${item.id})`);
-          }
         }
-      } else {
-        console.warn(`⚠️ No line_items in receipt ${receipt.receipt_number}`);
+
+        processed++;
       }
 
-      processed++;
+      if (!nextCursor) break;
+      cursor = nextCursor;
     }
 
     return new Response(`Successfully processed ${processed} receipts.`, {
@@ -129,12 +109,9 @@ serve(async (req) => {
     });
 
   } catch (err) {
-    console.error("Unhandled error:", err);
     return new Response(`Error: ${err.message}`, {
       status: 500,
       headers: { "Content-Type": "text/plain" },
     });
   }
 });
-//Com
-//com
