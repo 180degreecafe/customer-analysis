@@ -11,6 +11,7 @@ serve(async (req) => {
     return new Response("Missing x-loyverse-token header", { status: 401 });
   }
 
+  const today = new Date().toISOString();
   let cursor: string | null = null;
   let processed = 0;
   const limit = 50;
@@ -19,6 +20,7 @@ serve(async (req) => {
     while (true) {
       const url = new URL("https://api.loyverse.com/v1.0/receipts");
       url.searchParams.set("limit", `${limit}`);
+      url.searchParams.set("receipt_date_before", today);
       if (cursor) url.searchParams.set("cursor", cursor);
 
       const res = await fetch(url.toString(), {
