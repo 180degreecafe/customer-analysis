@@ -41,5 +41,7 @@ jobs:
           supabase functions deploy fetch-loyverse-receipts
 
       - name: Invoke the function after deployment using curl
+        env:
+          ACCESS_TOKEN: ${{ secrets.ACCESS_TOKEN }}
         run: |
           curl -X POST https://qwaooajgkkqtpbidzumd.supabase.co/functions/v1/fetch-loyverse-receipts
