@@ -12,15 +12,15 @@ serve(async (req) => {
   }
 
   const limit = 50;
-  let lastReceiptNumber: string | null = null;
+  let beforeReceipt: string | null = "11-11538"; // نقطة البداية
   let processed = 0;
 
   try {
     while (true) {
       const url = new URL("https://api.loyverse.com/v1.0/receipts");
       url.searchParams.set("limit", `${limit}`);
-      if (lastReceiptNumber) {
-        url.searchParams.set("before_receipt_number", lastReceiptNumber);
+      if (beforeReceipt) {
+        url.searchParams.set("before_receipt_number", beforeReceipt);
       }
 
       const res = await fetch(url.toString(), {
@@ -38,7 +38,7 @@ serve(async (req) => {
       if (!receipts || receipts.length === 0) break;
 
       for (const receipt of receipts) {
-        lastReceiptNumber = receipt.receipt_number;
+        beforeReceipt = receipt.receipt_number;
 
         let customer_id = null;
 
