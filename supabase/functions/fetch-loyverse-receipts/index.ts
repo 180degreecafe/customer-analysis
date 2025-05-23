@@ -1,13 +1,17 @@
 import { serve } from "https://deno.land/std@0.192.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-const ACCESS_TOKEN = Deno.env.get("ACCESS_TOKEN")!;
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
-serve(async () => {
+serve(async (req: Request) => {
   try {
+    const ACCESS_TOKEN = req.headers.get("x-loyverse-token");
+    if (!ACCESS_TOKEN) {
+      return new Response("Missing x-loyverse-token header", { status: 401 });
+    }
+
     const res = await fetch("https://api.loyverse.com/v1.0/receipts?limit=50", {
       headers: {
         Authorization: `Bearer ${ACCESS_TOKEN}`,
@@ -25,7 +29,6 @@ serve(async () => {
     for (const receipt of receipts) {
       let customer_id = null;
 
-      // جلب بيانات العميل
       if (receipt.customer_id) {
         const customerRes = await fetch(`https://api.loyverse.com/v1.0/customers/${receipt.customer_id}`, {
           headers: {
@@ -61,7 +64,6 @@ serve(async () => {
         }
       }
 
-      // الطلب
       const { data: order } = await supabase
         .from("Orders")
         .upsert({
@@ -72,7 +74,6 @@ serve(async () => {
         .select()
         .single();
 
-      // العناصر
       for (const item of receipt.line_items) {
         await supabase.from("Order_items").upsert({
           id: item.id,
@@ -98,6 +99,3 @@ serve(async () => {
     });
   }
 });
-
-console.log("Token prefix:", ACCESS_TOKEN?.slice(0, 5)); // اختياري للطباعة
-//com
