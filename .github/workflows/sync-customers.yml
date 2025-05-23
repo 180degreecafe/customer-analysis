@@ -1,0 +1,15 @@
+name: Sync Customers from Loyverse
+
+on:
+  schedule:
+    - cron: '*/30 * * * *'  # كل 30 دقيقة
+  workflow_dispatch:
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Sync customers
+        run: |
+          curl -X POST https://qwaooajgkkqtpbidzumd.supabase.co/functions/v1/sync-customers \
+            -H "x-loyverse-token: ${{ secrets.ACCESS_TOKEN }}"
