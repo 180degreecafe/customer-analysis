@@ -6,7 +6,7 @@ on:
       - main
     paths:
       - "supabase/functions/sync-customers/**"
-  workflow_dispatch: 
+  workflow_dispatch:
 
 jobs:
   deploy:
@@ -37,6 +37,5 @@ jobs:
         env:
           ACCESS_TOKEN: ${{ secrets.ACCESS_TOKEN }}
         run: |
-          echo "Invoking function..."
           curl -X POST https://qwaooajgkkqtpbidzumd.supabase.co/functions/v1/sync-customers \
             -H "x-loyverse-token: $ACCESS_TOKEN"
