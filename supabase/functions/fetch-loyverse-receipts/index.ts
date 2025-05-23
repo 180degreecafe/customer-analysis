@@ -11,17 +11,17 @@ serve(async (req) => {
     return new Response("Missing x-loyverse-token header", { status: 401 });
   }
 
-  const today = new Date().toISOString();
-  let cursor: string | null = null;
-  let processed = 0;
   const limit = 50;
+  let lastReceiptNumber: string | null = null;
+  let processed = 0;
 
   try {
     while (true) {
       const url = new URL("https://api.loyverse.com/v1.0/receipts");
       url.searchParams.set("limit", `${limit}`);
-      url.searchParams.set("receipt_date_before", today);
-      if (cursor) url.searchParams.set("cursor", cursor);
+      if (lastReceiptNumber) {
+        url.searchParams.set("before_receipt_number", lastReceiptNumber);
+      }
 
       const res = await fetch(url.toString(), {
         headers: {
@@ -34,10 +34,12 @@ serve(async (req) => {
         return new Response(`Failed to fetch receipts: ${res.status}`, { status: 500 });
       }
 
-      const { receipts, cursor: nextCursor } = await res.json();
+      const { receipts } = await res.json();
       if (!receipts || receipts.length === 0) break;
 
       for (const receipt of receipts) {
+        lastReceiptNumber = receipt.receipt_number;
+
         let customer_id = null;
 
         if (receipt.customer_id) {
@@ -102,12 +104,9 @@ serve(async (req) => {
 
         processed++;
       }
-
-      if (!nextCursor) break;
-      cursor = nextCursor;
     }
 
-    return new Response(`✅ Successfully processed ${processed} receipts.`, {
+    return new Response(`✅ Fetched and stored ${processed} receipts`, {
       headers: { "Content-Type": "text/plain" },
     });
 
