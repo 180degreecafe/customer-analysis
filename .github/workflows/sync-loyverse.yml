@@ -2,14 +2,17 @@ name: Sync Loyverse Receipts Every 10 Minutes
 
 on:
   schedule:
-    - cron: '*/10 * * * *'  # كل 10 دقائق
-  workflow_dispatch:        # لتشغيله يدويًا
+    - cron: "*/10 * * * *"
+  workflow_dispatch:
 
 jobs:
   sync:
     runs-on: ubuntu-latest
     steps:
       - name: Invoke Supabase Edge Function
+        env:
+          ACCESS_TOKEN: ${{ secrets.ACCESS_TOKEN }}
         run: |
-          curl -X POST https://qwaooajgkkqtpbidzumd.supabase.co/functions/v1/fetch-loyverse-receipts \
-            -H "Authentication: Bearer ${{ secrets.ACCESS_TOKEN }}"
+          echo "Invoking fetch-loyverse-receipts with token prefix: ${ACCESS_TOKEN:0:5}***"
+          curl -X POST "https://qwaooajgkkqtpbidzumd.supabase.co/functions/v1/fetch-loyverse-receipts" \
+            -H "x-loyverse-token: $ACCESS_TOKEN"
