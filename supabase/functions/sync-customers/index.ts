@@ -3,17 +3,11 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+const ACCESS_TOKEN = Deno.env.get("ACCESS_TOKEN")!;
+
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
-serve(async (req) => {
-  const accessToken = req.headers.get("x-loyverse-token") || req.headers.get("X-Loyverse-Token");
-  if (!accessToken) {
-    return new Response(JSON.stringify({ code: 401, message: "Missing authorization header" }), {
-      status: 401,
-      headers: { "Content-Type": "application/json" },
-    });
-  }
-
+serve(async () => {
   let inserted = 0;
   let cursor: string | null = null;
 
@@ -24,7 +18,7 @@ serve(async (req) => {
 
     const res = await fetch(url.toString(), {
       headers: {
-        Authorization: `Bearer ${accessToken}`,
+        Authorization: `Bearer ${ACCESS_TOKEN}`,
         Accept: "application/json",
       },
     });
