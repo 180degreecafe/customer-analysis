@@ -10,7 +10,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Print token prefix (for debugging)
-        run: echo "Using token prefix: ${ACCESS_TOKEN:0:5}***"
+        run: |
+          echo "Using token prefix: ${ACCESS_TOKEN:0:5}***"
         env:
           ACCESS_TOKEN: ${{ secrets.ACCESS_TOKEN }}
 
