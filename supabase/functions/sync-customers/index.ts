@@ -62,3 +62,4 @@ serve(async (req) => {
     headers: { "Content-Type": "text/plain" },
   });
 });
+//com
