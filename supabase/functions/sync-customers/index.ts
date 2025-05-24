@@ -6,7 +6,7 @@ const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
 serve(async (req) => {
-  const accessToken = req.headers.get("x-loyverse-token");
+  const accessToken = req.headers.get("x-loyverse-token") || req.headers.get("X-Loyverse-Token");
   if (!accessToken) {
     return new Response("Missing x-loyverse-token header", { status: 401 });
   }
