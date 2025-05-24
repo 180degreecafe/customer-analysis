@@ -13,4 +13,4 @@ jobs:
         run: |
           echo "Invoking sync-customers function..."
           curl -X POST "https://qwaooajgkkqtpbidzumd.supabase.co/functions/v1/sync-customers" \
-            -H "Authorization: Bearer ${{ secrets.ACCESS_TOKEN }}"
+            -H "x-loyverse-token: ${{ secrets.ACCESS_TOKEN }}"
