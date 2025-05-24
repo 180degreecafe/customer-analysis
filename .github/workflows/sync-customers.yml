@@ -10,7 +10,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Print token prefix
-        run: echo "Calling function with token prefix: ${{ secrets.ACCESS_TOKEN:0:5 }}***"
+        run: |
+          echo "Calling function with token prefix: ${{ secrets.ACCESS_TOKEN:0:5 }}***"
 
       - name: Invoke Supabase Edge Function
         run: |
