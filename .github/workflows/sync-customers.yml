@@ -9,11 +9,8 @@ jobs:
   sync-customers:
     runs-on: ubuntu-latest
     steps:
-      - name: Print token prefix
-        run: |
-          echo "Calling function with token prefix: ${{ secrets.ACCESS_TOKEN:0:5 }}***"
-
       - name: Invoke Supabase Edge Function
         run: |
+          echo "Invoking sync-customers function..."
           curl -X POST "https://qwaooajgkkqtpbidzumd.supabase.co/functions/v1/sync-customers" \
             -H "Authorization: Bearer ${{ secrets.ACCESS_TOKEN }}"
