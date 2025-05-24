@@ -12,4 +12,4 @@ jobs:
       - name: Invoke Supabase Edge Function
         run: |
           curl -X POST https://qwaooajgkkqtpbidzumd.supabase.co/functions/v1/fetch-loyverse-receipts \
-            -H "x-loyverse-token: Bearer ${{ secrets.ACCESS_TOKEN }}"
+            -H "Authentication: Bearer ${{ secrets.ACCESS_TOKEN }}"
