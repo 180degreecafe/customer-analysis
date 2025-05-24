@@ -2,7 +2,7 @@ name: Sync Loyverse Customers Every 12 Hours
 
 on:
   schedule:
-    - cron: "0 */12 * * *"
+    - cron: "0 */12 * * *"  # كل 12 ساعة
   workflow_dispatch:
 
 jobs:
@@ -10,9 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Invoke Supabase Edge Function
-        env:
-          ACCESS_TOKEN: ${{ secrets.ACCESS_TOKEN }}
         run: |
           echo "Invoking sync-customers function..."
           curl -X POST "https://qwaooajgkkqtpbidzumd.supabase.co/functions/v1/sync-customers" \
-            -H "Authorization: Bearer $ACCESS_TOKEN"
+            -H "x-loyverse-token: ${{ secrets.ACCESS_TOKEN }}"
