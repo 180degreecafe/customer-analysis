@@ -1,5 +1,3 @@
-// supabase/functions/fetch-loyverse-customers/index.ts
-
 import { serve } from "https://deno.land/std@0.192.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
@@ -10,10 +8,7 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 serve(async (req) => {
   const accessToken = req.headers.get("x-loyverse-token");
   if (!accessToken) {
-    return new Response(JSON.stringify({ code: 401, message: "Missing authorization header" }), {
-      status: 401,
-      headers: { "Content-Type": "application/json" },
-    });
+    return new Response("Missing x-loyverse-token header", { status: 401 });
   }
 
   let inserted = 0;
