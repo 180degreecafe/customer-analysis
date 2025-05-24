@@ -10,6 +10,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Invoke sync-customers function
+        env:
+          ACCESS_TOKEN: ${{ secrets.ACCESS_TOKEN }}
         run: |
           curl -X POST "https://qwaooajgkkqtpbidzumd.supabase.co/functions/v1/sync-customers" \
-            -H "x-loyverse-token: ${{ secrets.ACCESS_TOKEN }}"
+            -H "x-loyverse-token: $ACCESS_TOKEN"
