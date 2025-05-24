@@ -11,33 +11,16 @@ serve(async (req) => {
     return new Response("Missing x-loyverse-token header", { status: 401 });
   }
 
-  const limit = 250;
-  let cursor = null;
-  let added = 0;
-  let skipped = 0;
-
-  while (true) {
-    const url = new URL("https://api.loyverse.com/v1.0/customers");
-    url.searchParams.set("limit", `${limit}`);
-    if (cursor) {
-      url.searchParams.set("cursor", cursor);
-    }
-
-    const res = await fetch(url.toString(), {
+  try {
+    const res = await fetch("https://api.loyverse.com/v1.0/customers", {
       headers: {
         Authorization: `Bearer ${accessToken}`,
         Accept: "application/json",
       },
     });
 
-    if (!res.ok) {
-      return new Response(`Failed to fetch customers: ${res.status}`, {
-        status: 500,
-        headers: { "Content-Type": "text/plain" },
-      });
-    }
-
-    const { customers, cursor: nextCursor } = await res.json();
+    const { customers } = await res.json();
+    let added = 0;
 
     for (const c of customers) {
       const { data: existing } = await supabase
@@ -46,25 +29,24 @@ serve(async (req) => {
         .eq("phone", c.phone_number)
         .maybeSingle();
 
-      if (existing) {
-        skipped++;
-        continue;
+      if (!existing) {
+        await supabase.from("customers").insert({
+          name: c.name,
+          phone: c.phone_number,
+          email: c.email,
+        });
+        added++;
       }
-
-      const { error } = await supabase.from("customers").insert({
-        name: c.name,
-        phone: c.phone_number,
-        email: c.email,
-      });
-
-      if (!error) added++;
     }
 
-    if (!nextCursor) break;
-    cursor = nextCursor;
-  }
+    return new Response(`✅ Synced ${added} new customers`, {
+      headers: { "Content-Type": "text/plain" },
+    });
 
-  return new Response(`✅ Synced customers. Added: ${added}, Skipped: ${skipped}`, {
-    headers: { "Content-Type": "text/plain" },
-  });
+  } catch (err) {
+    return new Response(`Error: ${err.message}`, {
+      status: 500,
+      headers: { "Content-Type": "text/plain" },
+    });
+  }
 });
