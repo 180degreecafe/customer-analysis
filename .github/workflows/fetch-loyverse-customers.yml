@@ -1,0 +1,16 @@
+name: Sync Loyverse Customers Every 12 Hours
+
+on:
+  schedule:
+    - cron: "0 */12 * * *"  # كل 12 ساعة
+  workflow_dispatch:
+
+jobs:
+  sync-customers:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Invoke fetch-loyverse-customers function
+        run: |
+          echo "Invoking fetch-loyverse-customers function..."
+          curl -X POST "https://qwaooajgkkqtpbidzumd.supabase.co/functions/v1/fetch-loyverse-customers" \
+            -H "x-loyverse-token: ${{ secrets.ACCESS_TOKEN }}"
