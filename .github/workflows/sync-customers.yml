@@ -15,8 +15,10 @@ jobs:
         env:
           ACCESS_TOKEN: ${{ secrets.ACCESS_TOKEN }}
 
-      - name: Invoke Supabase Edge Function
+      - name: Set token and call function
+        env:
+          ACCESS_TOKEN: ${{ secrets.ACCESS_TOKEN }}
         run: |
+          echo "Calling function with token prefix: ${ACCESS_TOKEN:0:5}***"
           curl -X POST "https://qwaooajgkkqtpbidzumd.supabase.co/functions/v1/sync-customers" \
-            -H "x-loyverse-token: ${{ secrets.ACCESS_TOKEN }}"
-#force
+            -H "x-loyverse-token: $ACCESS_TOKEN"
