@@ -11,25 +11,8 @@ serve(async (req) => {
     return new Response("Missing x-loyverse-token header", { status: 401 });
   }
 
-  // Step 1: Get the latest order_time
-  const { data: latestOrder } = await supabase
-    .from("orders")
-    .select("order_time")
-    .order("order_time", { ascending: false })
-    .limit(1)
-    .single();
-
-  const latestTime = latestOrder?.order_time;
-
-  // Step 2: Prepare the API URL
-  const baseUrl = new URL("https://api.loyverse.com/v1.0/receipts");
-  baseUrl.searchParams.set("limit", "50");
-  baseUrl.searchParams.set("sort_by", "receipt_date:asc");
-  if (latestTime) {
-    baseUrl.searchParams.set("filter", `receipt_date>"${latestTime}"`);
-  }
-
-  const res = await fetch(baseUrl.toString(), {
+  // No date filter
+  const res = await fetch("https://api.loyverse.com/v1.0/receipts?limit=50&sort_by=receipt_date:desc", {
     headers: {
       Authorization: `Bearer ${accessToken}`,
       Accept: "application/json",
@@ -44,7 +27,7 @@ serve(async (req) => {
   let processed = 0;
 
   for (const receipt of receipts) {
-    // Skip if already exists
+    // Check if already exists
     const { data: existingOrder } = await supabase
       .from("orders")
       .select("id")
@@ -59,7 +42,7 @@ serve(async (req) => {
       const { data: existing } = await supabase
         .from("customers")
         .select("id")
-        .eq("id", receipt.customer_id) // loyverse_id = customers.id
+        .eq("id", receipt.customer_id) // based on loyverse_id = customers.id
         .maybeSingle();
 
       if (existing) {
@@ -77,7 +60,7 @@ serve(async (req) => {
         created_at: receipt.created_at,
         order_time: adjustedTime,
         total_amount: receipt.total_money,
-        raw_item: receipt, // Save full receipt JSON
+        raw_item: receipt,
       })
       .select()
       .single();
@@ -92,7 +75,7 @@ serve(async (req) => {
         quantity: item.quantity,
         price: item.price,
         total: item.total_money,
-        raw_item: item, // Save full item JSON
+        raw_item: item,
       }, { onConflict: "id" });
     }
 
