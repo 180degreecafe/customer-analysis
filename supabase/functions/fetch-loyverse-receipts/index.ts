@@ -1,88 +1,93 @@
-import { serve } from "https://deno.land/std@0.192.0/http/server.ts";
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
-const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
-
 serve(async (req) => {
-  const accessToken = req.headers.get("x-loyverse-token");
-  if (!accessToken) {
-    return new Response("Missing x-loyverse-token header", { status: 401 });
+  const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
+  const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+  const ACCESS_TOKEN = req.headers.get("x-loyverse-token");
+
+  if (!ACCESS_TOKEN) {
+    return new Response(JSON.stringify({ error: "Missing x-loyverse-token header" }), { status: 401 });
   }
 
-  // No date filter
-  const res = await fetch("https://api.loyverse.com/v1.0/receipts?limit=50&sort_by=receipt_date:desc", {
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-      Accept: "application/json",
-    },
-  });
+  const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
-  if (!res.ok) {
-    return new Response(`Failed to fetch receipts: ${res.status}`, { status: 500 });
-  }
+  // 1. Get last order timestamp
+  const { data: lastOrder, error } = await supabase
+    .from("orders")
+    .select("order_time")
+    .order("order_time", { ascending: false })
+    .limit(1)
+    .single();
 
-  const { receipts } = await res.json();
-  let processed = 0;
+  const lastDate = lastOrder?.order_time
+    ? new Date(lastOrder.order_time).toISOString()
+    : null;
 
-  for (const receipt of receipts) {
-    // Check if already exists
-    const { data: existingOrder } = await supabase
-      .from("orders")
-      .select("id")
-      .eq("id", receipt.receipt_number)
-      .maybeSingle();
+  let cursor: string | null = null;
+  let imported = 0;
 
-    if (existingOrder) continue;
+  while (true) {
+    const url = new URL("https://api.loyverse.com/v1.0/receipts");
+    url.searchParams.set("limit", "250");
+    if (cursor) url.searchParams.set("cursor", cursor);
+    if (lastDate) url.searchParams.set("created_at_min", lastDate);
 
-    let customer_id = null;
+    const res = await fetch(url.toString(), {
+      headers: {
+        Authorization: `Bearer ${ACCESS_TOKEN}`,
+        Accept: "application/json",
+      },
+    });
 
-    if (receipt.customer_id) {
-      const { data: existing } = await supabase
-        .from("customers")
-        .select("id")
-        .eq("id", receipt.customer_id) // based on loyverse_id = customers.id
-        .maybeSingle();
-
-      if (existing) {
-        customer_id = existing.id;
-      }
+    if (!res.ok) {
+      const errorMsg = await res.text();
+      console.error("❌ Failed to fetch receipts:", errorMsg);
+      return new Response(`Failed to fetch receipts: ${errorMsg}`, { status: 500 });
     }
 
-    const adjustedTime = new Date(new Date(receipt.receipt_date).getTime() + 3 * 60 * 60 * 1000).toISOString();
+    const { receipts, cursor: nextCursor } = await res.json();
+    if (!receipts || receipts.length === 0) break;
 
-    const { data: order } = await supabase
-      .from("orders")
-      .insert({
-        id: receipt.receipt_number,
-        customer_id: customer_id,
-        created_at: receipt.created_at,
-        order_time: adjustedTime,
-        total_amount: receipt.total_money,
-        raw_item: receipt,
-      })
-      .select()
-      .single();
+    for (const r of receipts) {
+      const { customer_id, receipt_number, created_at, total_money, line_items } = r;
 
-    if (!order) continue;
-
-    for (const item of receipt.line_items) {
-      await supabase.from("order_items").upsert({
-        id: item.id,
-        order_id: order.id,
-        product_name: item.item_name,
-        quantity: item.quantity,
-        price: item.price,
-        total: item.total_money,
-        raw_item: item,
+      const { error: orderError } = await supabase.from("orders").upsert({
+        id: receipt_number,
+        order_time: created_at,
+        total_amount: total_money,
+        customer_id: customer_id || null,
+        raw_item: r,
       }, { onConflict: "id" });
+
+      if (orderError) {
+        console.error(`❌ Failed to insert order ${receipt_number}:`, orderError.message);
+        continue;
+      }
+
+      if (Array.isArray(line_items)) {
+        for (const item of line_items) {
+          const { error: itemError } = await supabase.from("order_items").insert({
+            order_id: receipt_number,
+            product_name: item.item_name,
+            quantity: item.quantity,
+            price: item.price,
+            raw_item: item,
+          });
+
+          if (itemError) {
+            console.error(`❌ Failed to insert item for order ${receipt_number}:`, itemError.message);
+          }
+        }
+      }
+
+      imported++;
     }
 
-    processed++;
+    if (!nextCursor) break;
+    cursor = nextCursor;
   }
 
-  return new Response(`✅ Synced ${processed} new receipts`, {
-    headers: { "Content-Type": "text/plain" },
-  });
+  console.log(`✅ Synced ${imported} new receipts`);
+  return new Response(`✅ Synced ${imported} new receipts`, { status: 200 });
 });
