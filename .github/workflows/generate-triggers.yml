@@ -4,15 +4,15 @@ name: Daily Trigger Generator
 
 on:
   schedule:
-    - cron: '0 6 * * *'  # Every day at 6:00 AM UTC = 9:00 AM Bahrain
+    - cron: '0 6 * * *'  # كل يوم الساعة 6 صباحًا UTC = 9 صباحًا بتوقيت البحرين
   workflow_dispatch:
 
 jobs:
-  run-generate-triggers:
+  call-supabase-function:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Call Supabase Edge Function: generate-triggers
+      - name: Call Supabase Edge Function
         run: |
           curl -X POST "${{ secrets.SUPABASE_URL }}/functions/v1/generate-triggers" \
             -H "Authorization: Bearer ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}"
