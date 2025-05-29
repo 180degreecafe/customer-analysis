@@ -1,0 +1,16 @@
+name: Run generate-triggers every morning
+
+on:
+  schedule:
+    - cron: "0 6 * * *"  # كل يوم الساعة 9 صباحًا بتوقيت البحرين (UTC+3)
+  workflow_dispatch:     # لتشغيله يدويًا من GitHub عند الحاجة
+
+jobs:
+  run-trigger:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Call Supabase Edge Function
+        run: |
+          echo "Running generate-triggers..."
+          curl -X POST "https://qwaooajgkkqtpbidzumd.supabase.co/functions/v1/generate-triggers" \
+            -H "Authorization: Bearer ${{ secrets.ACCESS_TOKEN }}"
