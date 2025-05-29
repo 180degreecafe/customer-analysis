@@ -11,7 +11,7 @@ serve(async (req) => {
     return new Response("Missing x-loyverse-token header", { status: 401 });
   }
 
-  // الخطوة 1: احصل على أحدث إيصال لدينا
+  // Step 1: Get the latest order_time
   const { data: latestOrder } = await supabase
     .from("orders")
     .select("order_time")
@@ -21,7 +21,7 @@ serve(async (req) => {
 
   const latestTime = latestOrder?.order_time;
 
-  // الخطوة 2: جهز رابط Loyverse مع شرط التاريخ (إن وجد)
+  // Step 2: Prepare the API URL
   const baseUrl = new URL("https://api.loyverse.com/v1.0/receipts");
   baseUrl.searchParams.set("limit", "50");
   baseUrl.searchParams.set("sort_by", "receipt_date:asc");
@@ -44,6 +44,7 @@ serve(async (req) => {
   let processed = 0;
 
   for (const receipt of receipts) {
+    // Skip if already exists
     const { data: existingOrder } = await supabase
       .from("orders")
       .select("id")
@@ -58,7 +59,7 @@ serve(async (req) => {
       const { data: existing } = await supabase
         .from("customers")
         .select("id")
-        .eq("id", receipt.customer_id) // loyverse_id
+        .eq("id", receipt.customer_id) // loyverse_id = customers.id
         .maybeSingle();
 
       if (existing) {
@@ -76,6 +77,7 @@ serve(async (req) => {
         created_at: receipt.created_at,
         order_time: adjustedTime,
         total_amount: receipt.total_money,
+        raw_item: receipt, // Save full receipt JSON
       })
       .select()
       .single();
@@ -90,6 +92,7 @@ serve(async (req) => {
         quantity: item.quantity,
         price: item.price,
         total: item.total_money,
+        raw_item: item, // Save full item JSON
       }, { onConflict: "id" });
     }
 
