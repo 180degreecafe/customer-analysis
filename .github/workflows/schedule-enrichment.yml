@@ -1,14 +1,13 @@
-# .github/workflows/schedule-update-enriched-customers.yml
-
-name: Daily Update Enriched Customers
+# .github/workflows/schedule-enrichment.yml
+name: Daily Enrichment Trigger
 
 on:
   schedule:
-    - cron: '0 6 * * *'  # Every day at 9:00 AM Bahrain time (6:00 AM UTC)
+    - cron: '0 3 * * *'  # كل يوم الساعة 6 صباحًا بتوقيت البحرين (3 UTC)
   workflow_dispatch:
 
 jobs:
-  trigger-update-enriched-customers:
+  trigger-supabase-function:
     runs-on: ubuntu-latest
 
     steps:
