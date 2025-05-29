@@ -1,17 +1,16 @@
-# .github/workflows/schedule-enrichment.yml
-name: Daily Enrichment Trigger
+name: Daily Enriched Customers Cache Update
 
 on:
   schedule:
-    - cron: '0 3 * * *'  # كل يوم الساعة 6 صباحًا بتوقيت البحرين (3 UTC)
+    - cron: '0 3 * * *'  # كل يوم الساعة 6 صباحًا بتوقيت البحرين (3:00 UTC)
   workflow_dispatch:
 
 jobs:
-  trigger-supabase-function:
+  call-edge-function:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Call Supabase Edge Function
+      - name: Call update-enriched-customers Edge Function
         run: |
           curl -X POST "${{ secrets.SUPABASE_URL }}/functions/v1/update-enriched-customers" \
             -H "Authorization: Bearer ${{ secrets.SUPABASE_ANON_KEY }}"
