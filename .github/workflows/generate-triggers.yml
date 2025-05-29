@@ -1,18 +1,15 @@
-# .github/workflows/schedule-generate-triggers.yml
-
-name: Daily Trigger Generator
+# .github/workflows/run-generate-triggers.yml
+name: Run Generate Triggers
 
 on:
-  schedule:
-    - cron: '0 6 * * *'  # كل يوم الساعة 6 صباحًا UTC = 9 صباحًا بتوقيت البحرين
-  workflow_dispatch:
+  workflow_dispatch:  # يسمح بتشغيلها يدويًا
 
 jobs:
-  call-supabase-function:
+  trigger-function:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Call Supabase Edge Function
+      - name: Call generate-triggers function
         run: |
           curl -X POST "${{ secrets.SUPABASE_URL }}/functions/v1/generate-triggers" \
-            -H "Authorization: Bearer ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}"
+            -H "Authorization: Bearer ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}" \
+            -H "Content-Type: application/json"
