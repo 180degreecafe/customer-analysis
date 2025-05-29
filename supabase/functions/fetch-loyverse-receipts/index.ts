@@ -11,7 +11,25 @@ serve(async (req) => {
     return new Response("Missing x-loyverse-token header", { status: 401 });
   }
 
-  const res = await fetch("https://api.loyverse.com/v1.0/receipts?limit=50", {
+  // الخطوة 1: احصل على أحدث إيصال لدينا
+  const { data: latestOrder } = await supabase
+    .from("orders")
+    .select("order_time")
+    .order("order_time", { ascending: false })
+    .limit(1)
+    .single();
+
+  const latestTime = latestOrder?.order_time;
+
+  // الخطوة 2: جهز رابط Loyverse مع شرط التاريخ (إن وجد)
+  const baseUrl = new URL("https://api.loyverse.com/v1.0/receipts");
+  baseUrl.searchParams.set("limit", "50");
+  baseUrl.searchParams.set("sort_by", "receipt_date:asc");
+  if (latestTime) {
+    baseUrl.searchParams.set("filter", `receipt_date>"${latestTime}"`);
+  }
+
+  const res = await fetch(baseUrl.toString(), {
     headers: {
       Authorization: `Bearer ${accessToken}`,
       Accept: "application/json",
@@ -26,7 +44,6 @@ serve(async (req) => {
   let processed = 0;
 
   for (const receipt of receipts) {
-    // تحقق إذا تم إدخال الإيصال مسبقًا
     const { data: existingOrder } = await supabase
       .from("orders")
       .select("id")
@@ -38,37 +55,14 @@ serve(async (req) => {
     let customer_id = null;
 
     if (receipt.customer_id) {
-      const customerRes = await fetch(`https://api.loyverse.com/v1.0/customers/${receipt.customer_id}`, {
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-          Accept: "application/json",
-        },
-      });
+      const { data: existing } = await supabase
+        .from("customers")
+        .select("id")
+        .eq("id", receipt.customer_id) // loyverse_id
+        .maybeSingle();
 
-      if (customerRes.ok) {
-        const c = await customerRes.json();
-
-        const { data: existing } = await supabase
-          .from("customers")
-          .select("id")
-          .eq("phone", c.phone_number)
-          .maybeSingle();
-
-        if (existing) {
-          customer_id = existing.id;
-        } else {
-          const { data: newCustomer } = await supabase
-            .from("customers")
-            .insert({
-              name: c.name,
-              phone: c.phone_number,
-              email: c.email,
-            })
-            .select()
-            .single();
-
-          customer_id = newCustomer?.id;
-        }
+      if (existing) {
+        customer_id = existing.id;
       }
     }
 
@@ -106,4 +100,3 @@ serve(async (req) => {
     headers: { "Content-Type": "text/plain" },
   });
 });
-//com
