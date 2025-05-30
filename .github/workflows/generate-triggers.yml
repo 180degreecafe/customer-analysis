@@ -1,5 +1,5 @@
-# .github/workflows/run-generate-triggers.yml
-name: Run Generate Triggers
+# .github/workflows/run-refresh-triggers.yml
+name: Run Refresh Triggers
 
 on:
   workflow_dispatch:  # يسمح بتشغيلها يدويًا
@@ -8,8 +8,10 @@ jobs:
   trigger-function:
     runs-on: ubuntu-latest
     steps:
-      - name: Call generate-triggers function
+      - name: Call refresh_triggers SQL function
         run: |
-          curl -X POST "${{ secrets.SUPABASE_URL }}/functions/v1/generate-triggers" \
+          curl -X POST "${{ secrets.SUPABASE_URL }}/rest/v1/rpc/refresh_triggers" \
             -H "Authorization: Bearer ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}" \
-            -H "Content-Type: application/json"
+            -H "apikey: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}" \
+            -H "Content-Type: application/json" \
+            --data '{}'
