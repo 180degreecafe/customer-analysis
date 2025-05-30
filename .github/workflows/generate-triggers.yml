@@ -2,18 +2,22 @@
 name: Run Refresh Triggers
 
 on:
-  workflow_dispatch:  # يسمح بتشغيلها يدويًا من واجهة GitHub
+  workflow_dispatch:  # يسمح بتشغيلها يدويًا من GitHub
   schedule:
-    - cron: '0 3 * * *'  # تشغيل تلقائي يوميًا الساعة 3 صباحًا UTC
+    - cron: '0 3 * * *'  # تشغيل يوميًا الساعة 3 صباحًا UTC
 
 jobs:
   trigger-function:
     runs-on: ubuntu-latest
     steps:
-      - name: Call refresh_triggers SQL function
+      - name: Call refresh_triggers SQL function and print result
         run: |
-          curl -X POST "${{ secrets.SUPABASE_URL }}/rest/v1/rpc/refresh_triggers" \
+          echo "📡 Calling Supabase RPC: refresh_triggers"
+          RESPONSE=$(curl -s -X POST "${{ secrets.SUPABASE_URL }}/rest/v1/rpc/refresh_triggers" \
             -H "Authorization: Bearer ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}" \
             -H "apikey: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}" \
             -H "Content-Type: application/json" \
-            --data '{}'
+            --data '{}')
+
+          echo "✅ Trigger Summary:"
+          echo "$RESPONSE"
