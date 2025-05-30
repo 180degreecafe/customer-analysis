@@ -2,7 +2,9 @@
 name: Run Refresh Triggers
 
 on:
-  workflow_dispatch:  # يسمح بتشغيلها يدويًا
+  workflow_dispatch:  # يسمح بتشغيلها يدويًا من واجهة GitHub
+  schedule:
+    - cron: '0 3 * * *'  # تشغيل تلقائي يوميًا الساعة 3 صباحًا UTC
 
 jobs:
   trigger-function:
