@@ -2,8 +2,8 @@ name: Track Redemptions
 
 on:
   schedule:
-    - cron: '0 * * * *'  # يشغلها كل ساعة
-  workflow_dispatch:      # لتشغيل يدوي من GitHub UI
+    - cron: '0 * * * *' # يشغلها كل ساعة
+  workflow_dispatch:     # لتشغيل يدوي من GitHub UI
 
 jobs:
   call-function:
@@ -11,24 +11,6 @@ jobs:
     steps:
       - name: Call Supabase Edge Function
         run: |
-          echo "📡 Calling Supabase function: track-redemptions..."
-
-          response=$(curl -s -X POST https://qwaooajgkkqtpbidzumd.supabase.co/functions/v1/track-redemptions \
-            -H "Authorization: Bearer ${{ secrets.SUPABASE_ANON_KEY }}" \
-            -H "Content-Type: application/json")
-
-          echo "------ Function Response ------"
-          echo "$response"
-          echo "-------------------------------"
-
-          success=$(echo "$response" | jq -r '.success // empty')
-          updated=$(echo "$response" | jq -r '.updated // 0')
-
-          if [[ "$success" == "true" ]]; then
-            echo "✅ Redemption tracking completed successfully."
-            echo "🔄 Records updated: $updated"
-          else
-            echo "❌ Error during redemption tracking:"
-            echo "$response"
-            exit 1
-          fi
+          curl -X POST https://qwaooajgkkqtpbidzumd.supabase.co/functions/v1/track-redemptions \
+          -H "Authorization: Bearer ${{ secrets.SUPABASE_ANON_KEY }}" \
+          -H "Content-Type: application/json"
