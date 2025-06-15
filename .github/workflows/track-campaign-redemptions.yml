@@ -1,0 +1,16 @@
+name: Track Campaign Redemptions
+
+on:
+  schedule:
+    - cron: '0 * * * *' # يشغلها كل ساعة
+  workflow_dispatch:     # لتشغيل يدوي من GitHub UI
+
+jobs:
+  call-function:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Call Supabase Edge Function
+        run: |
+          curl -X POST https://qwaooajgkkqtpbidzumd.supabase.co/functions/v1/track-campaign-redemptions \
+          -H "Authorization: Bearer ${{ secrets.SUPABASE_ANON_KEY }}" \
+          -H "Content-Type: application/json"
