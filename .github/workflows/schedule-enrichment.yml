@@ -10,7 +10,8 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Call update-enriched-customers Edge Function
+      - name: Call update-enriched-customers Edge Function with longer timeout
         run: |
-          curl -X POST "${{ secrets.SUPABASE_URL }}/functions/v1/update-enriched-customers" \
-            -H "Authorization: Bearer ${{ secrets.SUPABASE_ANON_KEY }}"
+          curl --max-time 300 -X POST \
+            "${{ secrets.SUPABASE_URL }}/functions/v1/update-enriched-customers" \
+            -H "Authorization: Bearer ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}"
