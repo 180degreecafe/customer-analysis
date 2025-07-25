@@ -10,9 +10,9 @@ jobs:
   trigger-function:
     runs-on: ubuntu-latest
     steps:
-      - name: Call refresh_triggers SQL function and print result
+      - name: Call refresh_triggers_batched SQL function and print result
         run: |
-          echo "📡 Calling Supabase RPC: refresh_triggers"
+          echo "📡 Calling Supabase RPC: refresh_triggers_batched"
           RESPONSE=$(curl -s -X POST "${{ secrets.SUPABASE_URL }}/rest/v1/rpc/refresh_triggers" \
             -H "Authorization: Bearer ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}" \
             -H "apikey: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}" \
