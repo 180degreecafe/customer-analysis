@@ -9,7 +9,7 @@ jobs:
   refresh-enriched-cache:
     runs-on: ubuntu-latest
     steps:
-      - name: Call refresh_enriched_customers_cache SQL function and print result
+      - name: Call batch_refresh_enriched_customers_cache SQL function and print result
         run: |
           echo "📡 Calling Supabase RPC: refresh_enriched_customers_cache"
           RESPONSE=$(curl -s -X POST "${{ secrets.SUPABASE_URL }}/rest/v1/rpc/refresh_enriched_customers_cache" \
