@@ -1,17 +1,22 @@
-name: Daily Enriched Customers Cache Update
+name: Run Refresh Enriched Customers Cache
 
 on:
+  workflow_dispatch:  # يسمح بتشغيلها يدويًا
   schedule:
-    - cron: '0 3 * * *'  # كل يوم الساعة 6 صباحًا بتوقيت البحرين (3:00 UTC)
-  workflow_dispatch:
+    - cron: '0 2 * * *'  # يوميًا الساعة 2 صباحًا UTC (5 صباحًا بتوقيت البحرين)
 
 jobs:
-  call-edge-function:
+  refresh-enriched-cache:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Call update-enriched-customers Edge Function with longer timeout
+      - name: Call refresh_enriched_customers_cache SQL function and print result
         run: |
-          curl --max-time 300 -X POST \
-            "${{ secrets.SUPABASE_URL }}/functions/v1/update-enriched-customers" \
-            -H "Authorization: Bearer ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}"
+          echo "📡 Calling Supabase RPC: refresh_enriched_customers_cache"
+          RESPONSE=$(curl -s -X POST "${{ secrets.SUPABASE_URL }}/rest/v1/rpc/refresh_enriched_customers_cache" \
+            -H "Authorization: Bearer ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}" \
+            -H "apikey: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}" \
+            -H "Content-Type: application/json" \
+            --data '{}')
+
+          echo "✅ Enriched Cache Refresh Result:"
+          echo "$RESPONSE"
